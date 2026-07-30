@@ -26,6 +26,8 @@
 .USAGE+DEBUG
 	~ Task Scheduled - EXAMPLE
 		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
+    ~ Run local - EXAMPLE
+		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
 	~ To Debug add to the CLI - EXAMPLE
 		*> "C:\software\LogRotationHandler.log"
 #>
@@ -37,10 +39,10 @@ param(
     [string]$ManagedIdentityClientId = "",
     [string]$StagingRoot = "D:\LogRotationStaging",
     [string[]]$SyslogServiceNames = @(
-        "syslogd"
+        "CCLsyslog"
     ),
     [string[]]$SyslogProcessNames = @(
-        "syslogd"
+        "syslogd.exe"
     ),
     [string[]]$SourceFolders = @(
         "D:\syslogd",
