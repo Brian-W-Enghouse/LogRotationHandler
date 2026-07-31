@@ -1,6 +1,7 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 0.9
+	Brians Log Rotation Handler Script - Version 0.9.1
+    Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
 			If not stopped within 2 minutes, Force stops if not completely stopped.
@@ -14,7 +15,7 @@
 	~ AZ CLI installed (Future proofing)
     ~ VM has system-assigned or user-assigned Managed Identity enabled.
     ~ Managed Identity has Storage Blob Data Contributor on target storage account/container.
-    ~ Script should run elevated if stopping services/processes requires admin rights.
+    ~ Script HAS TO run elevated if stopping services/processes requires admin rights (eg service account).
 	
 .NOTES
 	~ Designed for minimum 1 hour rotation with variation as the timestamp folder is rounded down to nearest 30-minute interval.
@@ -42,21 +43,43 @@ param(
         "CCLsyslog"
     ),
     [string[]]$SyslogProcessNames = @(
-        "syslogd.exe"
+        "syslogd"
     ),
-    [string[]]$SourceFolders = @(
-        "D:\syslogd",
-        "D:\ReportedProblems",
-		"D:\DesignerLogs",
-        "D:\CrashDumps",
-		"D:\IIS"
+    [string[]]$SourceFolderNames = @(
+        "syslogd",
+        "ReportedProblems",
+        "DesignerLogs",
+        "CrashDumps",
+        "IIS"
     ),
+    [string[]]$SourceFolders = @(),
     [string]$AzCopyPath = "azcopy.exe",
     [switch]$RemoveStagingAfterUpload
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+function Get-TempDriveRoot {
+    if (-not $env:TEMP) {
+        throw "TEMP environment variable is not defined."
+    }
+
+    $tempDriveRoot = [System.IO.Path]::GetPathRoot($env:TEMP)
+
+    if (-not $tempDriveRoot) {
+        throw "Unable to determine drive root from TEMP path: $env:TEMP"
+    }
+
+    return $tempDriveRoot
+}
+
+if ($SourceFolders.Count -eq 0) {
+    $tempDriveRoot = Get-TempDriveRoot
+
+    $SourceFolders = foreach ($folderName in $SourceFolderNames) {
+        Join-Path -Path $tempDriveRoot -ChildPath $folderName
+    }
+}
 
 function Write-Log {
     param(
@@ -95,7 +118,7 @@ function Stop-Syslog {
                 if ($svc.Status -ne "Stopped") {
                     Write-Log "Stopping service: $serviceName"
                     Stop-Service -Name $serviceName -Force -ErrorAction Stop
-                    $svc.WaitForStatus("Stopped", "00:01:00")
+                    $svc.WaitForStatus("Stopped", "00:02:00")
                     Write-Log "Service stopped: $serviceName"
                 }
                 else {
@@ -264,6 +287,12 @@ try {
     Write-Log "Hostname: $hostname"
     Write-Log "Timestamp folder: $timestampFolder"
     Write-Log "Staging path: $stagingPath"
+    Write-Log "TEMP path: $env:TEMP"
+    Write-Log "Source folders resolved from TEMP drive:"
+
+    foreach ($sourceFolder in $SourceFolders) {
+        Write-Log " - $sourceFolder"
+    }
 
     New-Item -Path $stagingPath -ItemType Directory -Force | Out-Null
 
@@ -273,7 +302,7 @@ try {
         Move-SourceFoldersToStaging -DestinationRoot $stagingPath
     }
     finally {
-        # Critical: bring syslog back even if copy partially fails.
+        # Critical: bring syslog back even if move partially fails.
         Start-Syslog
     }
 
