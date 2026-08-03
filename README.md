@@ -5,6 +5,13 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
 			
 2 	-	Moves active log files from configured source folders into a timestamped staging directory
 
+        Folders Included are based on the Temp directory location:
+		"syslogd",
+        "ReportedProblems",
+        "DesignerLogs",
+        "CrashDumps",
+        "IIS"
+
 3 	-	Restarts syslog
 
 4 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
