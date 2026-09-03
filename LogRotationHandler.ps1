@@ -326,6 +326,6 @@ catch {
     catch {
         Write-Log "Syslog restart attempt after failure also failed. $($_.Exception.Message)" "ERROR"
     }
-
+    
     exit 1
 }
