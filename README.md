@@ -8,7 +8,7 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
         Folders Included are based on the Temp directory location (EG D or E respectively)
 		"syslogd",
         "ReportedProblems",
-        "DesignerLogs",
+        "CosmoDesigner",
         "CrashDumps",
         "IIS"
 
