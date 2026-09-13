@@ -68,6 +68,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+
 function Write-Log {
     param(
         [Parameter(Mandatory)]
@@ -80,8 +81,7 @@ function Write-Log {
     $line = "{0} [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
     Write-Host $line
 }
-
-
+## INSTALLER
 function Install-LogRotationTask {
     $taskName = "LogRotationHandler"
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -92,12 +92,10 @@ function Install-LogRotationTask {
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
 }
-
 function Uninstall-LogRotationTask {
 	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
 	Write-Log "Scheduled task removed."
 }
-
 if ($Install) {
     if (-not (Test-Path "C:\Software\7zr.exe")) {
         Write-Log "7zr.exe not found. Downloading."
@@ -126,11 +124,11 @@ if ($Install) {
         Install-LogRotationTask
     exit 0
 }
-
 if ($Uninstall) {
     Uninstall-LogRotationTask
     exit 0
 }
+## END INSTALLER
 
 function Get-TempDriveRoot {
     if (-not $env:TEMP) {
