@@ -10,9 +10,8 @@
 	4 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
 
 .REQUIREMENTS
-    ~ AzCopy installed and available in PATH, or configure $AzCopyPath.
-	~ Powershell 7
-	~ AZ CLI installed (Future proofing)
+	~ Powershell 7 - Installed
+	~ AZ CLI installed (Future proofing) - Installed
     ~ VM has system-assigned or user-assigned Managed Identity enabled.
     ~ Managed Identity has Storage Blob Data Contributor on target storage account/container.
     ~ Script HAS TO run elevated if stopping services/processes requires admin rights (eg service account).
@@ -25,6 +24,10 @@
 	~ Local staging is removed only when -RemoveStagingAfterUpload is supplied and upload succeeds.
 
 .USAGE+DEBUG
+	~ To Install
+		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Install
+	~ To UnInstall
+		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Uninstall
 	~ Task Scheduled - EXAMPLE
 		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
     ~ Run local - EXAMPLE
@@ -54,11 +57,24 @@ param(
     ),
     [string[]]$SourceFolders = @(),
     [string]$AzCopyPath = "azcopy.exe",
+	[switch]$Install,
+	[switch]$Uninstall,
     [switch]$RemoveStagingAfterUpload
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($Install) {
+    Install-LogRotationTask
+    exit 0
+}
+
+if ($Uninstall) {
+    Uninstall-LogRotationTask
+    exit 0
+}
+
 function Get-TempDriveRoot {
     if (-not $env:TEMP) {
         throw "TEMP environment variable is not defined."
@@ -73,12 +89,20 @@ function Get-TempDriveRoot {
     return $tempDriveRoot
 }
 
-if ($SourceFolders.Count -eq 0) {
-    $tempDriveRoot = Get-TempDriveRoot
+function Install-LogRotationTask {
+    $taskName = "LogRotationHandler"
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+		Write-Log "Installing scheduled task as: $currentUser"
+    $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
+    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName $StorageAccountName -ContainerName $ContainerName -RemoveStagingAfterUpload"
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
+		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
+}
 
-    $SourceFolders = foreach ($folderName in $SourceFolderNames) {
-        Join-Path -Path $tempDriveRoot -ChildPath $folderName
-    }
+function Uninstall-LogRotationTask {
+	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
+	Write-Log "Scheduled task removed."
 }
 
 function Write-Log {
