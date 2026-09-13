@@ -15,6 +15,9 @@
     ~ VM has system-assigned or user-assigned Managed Identity enabled.
     ~ Managed Identity has Storage Blob Data Contributor on target storage account/container.
     ~ Script HAS TO run elevated if stopping services/processes requires admin rights (eg service account).
+	~ If not installed it will install on setup in the software folder:
+		AzCopy
+		7zip
 	
 .NOTES
 	~ Designed for minimum 1 hour rotation with variation as the timestamp folder is rounded down to nearest 30-minute interval.
@@ -56,7 +59,7 @@ param(
         "IIS"
     ),
     [string[]]$SourceFolders = @(),
-    [string]$AzCopyPath = "azcopy.exe",
+    [string]$AzCopyPath = "C:\Software\azcopy.exe",
 	[switch]$Install,
 	[switch]$Uninstall,
     [switch]$RemoveStagingAfterUpload
@@ -65,8 +68,60 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Write-Log {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Message,
+
+        [ValidateSet("INFO", "WARN", "ERROR")]
+        [string]$Level = "INFO"
+    )
+
+    $line = "{0} [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
+    Write-Host $line
+}
+
+
+function Install-LogRotationTask {
+    $taskName = "LogRotationHandler"
+    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+		Write-Log "Installing scheduled task as: $currentUser"
+    $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
+    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -RemoveStagingAfterUpload"
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
+		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
+		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
+}
+
+function Uninstall-LogRotationTask {
+	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
+	Write-Log "Scheduled task removed."
+}
+
 if ($Install) {
-    Install-LogRotationTask
+    if (-not (Test-Path "C:\Software\7zr.exe")) {
+        Write-Log "7zr.exe not found. Downloading."
+        Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile "C:\Software\7zr.exe"
+        Write-Log "7zr.exe downloaded successfully."
+        }
+        else {
+        Write-Log "7zr.exe already present."
+        }
+    if (-not (Test-Path "C:\Software\azcopy.exe")) {
+        $azCopyZip = "C:\azcopy.zip"
+        Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
+        Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
+        $azCopyExe = Get-ChildItem -Path "C:\Software" -Recurse -Filter "azcopy.exe" | Select-Object -First 1
+        if (-not $azCopyExe) {
+            throw "Failed to locate azcopy.exe in downloaded package."
+        }
+        Copy-Item $azCopyExe.FullName "C:\Software\azcopy.exe" -Force
+        Write-Log "AzCopy extracted successfully."
+    }
+    else {
+        Write-Log "AzCopy already present."
+    }    
+        Install-LogRotationTask
     exit 0
 }
 
@@ -87,35 +142,6 @@ function Get-TempDriveRoot {
     }
 
     return $tempDriveRoot
-}
-
-function Install-LogRotationTask {
-    $taskName = "LogRotationHandler"
-    $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-		Write-Log "Installing scheduled task as: $currentUser"
-    $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
-    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName $StorageAccountName -ContainerName $ContainerName -RemoveStagingAfterUpload"
-    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
-		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
-		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
-}
-
-function Uninstall-LogRotationTask {
-	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
-	Write-Log "Scheduled task removed."
-}
-
-function Write-Log {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Message,
-
-        [ValidateSet("INFO", "WARN", "ERROR")]
-        [string]$Level = "INFO"
-    )
-
-    $line = "{0} [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
-    Write-Host $line
 }
 
 function Get-RoundedTimestamp {
