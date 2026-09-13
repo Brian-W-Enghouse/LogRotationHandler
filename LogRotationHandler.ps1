@@ -27,9 +27,9 @@
 	~ Local staging is removed only when -RemoveStagingAfterUpload is supplied and upload succeeds.
 
 .USAGE+DEBUG
-	~ To Install
+	~ To Install Scheduled Task (and utilities)
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Install
-	~ To UnInstall
+	~ To UnInstall Schedule Task 
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Uninstall
 	~ Task Scheduled - EXAMPLE
 		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
