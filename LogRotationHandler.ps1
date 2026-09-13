@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.0.2
+	Brians Log Rotation Handler Script - Version 1.1.0
     Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
