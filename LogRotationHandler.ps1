@@ -108,8 +108,10 @@ if ($Install) {
         Write-Log "7zr.exe already present."
         }
     if (-not (Test-Path "C:\Software\azcopy.exe")) {
+        Write-Log "Azcopy.exe not found. Downloading."
         $azCopyZip = "C:\azcopy.zip"
         Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
+        Write-Log "Azcopy.exe downloaded successfully."
         Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
         $azCopyExe = Get-ChildItem -Path "C:\Software" -Recurse -Filter "azcopy.exe" | Select-Object -First 1
         if (-not $azCopyExe) {
