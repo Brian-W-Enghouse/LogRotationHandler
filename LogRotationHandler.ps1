@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 0.9.2
+	Brians Log Rotation Handler Script - Version 1.0.2
     Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
@@ -38,7 +38,7 @@ param(
     [string]$StorageAccountName = "<storage-account-name>",
     [string]$ContainerName      = "<container-name>",
     [string]$ManagedIdentityClientId = "",
-    [string]$StagingRoot = "D:\LogRotationStaging",
+    [string]$StagingRoot = (Join-Path ([System.IO.Path]::GetTempPath()) "LogRotationStaging"),
     [string[]]$SyslogServiceNames = @(
         "CCLsyslog"
     ),
