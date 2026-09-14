@@ -20,7 +20,7 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
 # Enhancements Requested (So Far)
 *	DesignerLogs - Add options for adding compression - FRAMEWORK IN PLACE
 *	Implement Task Scheduler Generator from Allans work - DONE
-*	If not installed it will install on setup in the software folder: AzCopy + 7zip - DONE
+*	Utilities/Install from single script eg setup in the software folder: AzCopy + 7zip - DONE
     
 # USAGE+DEBUG
 	~ To Install
