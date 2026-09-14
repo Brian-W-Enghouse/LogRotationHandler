@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.1.0
+	Brians Log Rotation Handler Script - Version 1.1.2
     Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
@@ -27,9 +27,9 @@
 	~ Local staging is removed only when -RemoveStagingAfterUpload is supplied and upload succeeds.
 
 .USAGE+DEBUG
-	~ To Install Scheduled Task (and utilities)
+	~ To Install
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Install
-	~ To UnInstall Schedule Task 
+	~ To UnInstall
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Uninstall
 	~ Task Scheduled - EXAMPLE
 		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
@@ -68,7 +68,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-
 function Write-Log {
     param(
         [Parameter(Mandatory)]
@@ -81,7 +80,8 @@ function Write-Log {
     $line = "{0} [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
     Write-Host $line
 }
-## INSTALLER
+
+
 function Install-LogRotationTask {
     $taskName = "LogRotationHandler"
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
@@ -92,10 +92,12 @@ function Install-LogRotationTask {
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
 }
+
 function Uninstall-LogRotationTask {
 	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
 	Write-Log "Scheduled task removed."
 }
+
 if ($Install) {
     if (-not (Test-Path "C:\Software\7zr.exe")) {
         Write-Log "7zr.exe not found. Downloading."
@@ -106,10 +108,8 @@ if ($Install) {
         Write-Log "7zr.exe already present."
         }
     if (-not (Test-Path "C:\Software\azcopy.exe")) {
-        Write-Log "Azcopy.exe not found. Downloading."
         $azCopyZip = "C:\azcopy.zip"
         Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
-        Write-Log "Azcopy.exe downloaded successfully."
         Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
         $azCopyExe = Get-ChildItem -Path "C:\Software" -Recurse -Filter "azcopy.exe" | Select-Object -First 1
         if (-not $azCopyExe) {
@@ -124,11 +124,11 @@ if ($Install) {
         Install-LogRotationTask
     exit 0
 }
+
 if ($Uninstall) {
     Uninstall-LogRotationTask
     exit 0
 }
-## END INSTALLER
 
 function Get-TempDriveRoot {
     if (-not $env:TEMP) {
@@ -326,6 +326,14 @@ function Upload-StagingToBlob {
     }
 
     Write-Log "Upload completed successfully."
+}
+
+if ($SourceFolders.Count -eq 0) {
+    $driveRoot = Get-TempDriveRoot
+ 
+    $SourceFolders = $SourceFolderNames | ForEach-Object {
+    Join-Path $driveRoot $_
+    }
 }
 
 try {
