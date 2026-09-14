@@ -19,6 +19,8 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
 
 # Enhancements Requested (So Far)
 *	DesignerLogs - Add options for adding compression - FRAMEWORK IN PLACE
+*	Framework uses a "Selector" method so all folders included in secondary list will compress and include in standard archiving process - WIP
+# Enhancements Completed! (So Far)
 *	Implement Task Scheduler Generator from Allans work - DONE
 *	Utilities/Install from single script eg setup in the software folder: AzCopy + 7zip - DONE
     
