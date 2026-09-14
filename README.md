@@ -18,12 +18,10 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
 4 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
 
 # Enhancements Requested (So Far)
-*	Implement Task Scheduler Generator from Allans work
-*	DesignerLogs - Add options for adding compression
-*	If not installed it will install on setup in the software folder:
-		AzCopy
-		7zip
- 	
+*	DesignerLogs - Add options for adding compression - FRAMEWORK IN PLACE
+*	Implement Task Scheduler Generator from Allans work - DONE
+*	If not installed it will install on setup in the software folder: AzCopy + 7zip - DONE
+    
 # USAGE+DEBUG
 	~ To Install
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Install
