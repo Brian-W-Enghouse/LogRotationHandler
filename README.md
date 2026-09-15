@@ -13,9 +13,9 @@ The Log Rotation Handler is a centrally maintained PowerShell script used to rot
         "CrashDumps",
         "IIS"
 		
-3 	-	Compresses Nominated Folders
+3 	-	Restarts syslog
 
-4 	-	Restarts syslog
+4 	-	Compresses Nominated Folders
 
 5 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
 
