@@ -37,6 +37,8 @@
 		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
     ~ Run local - EXAMPLE
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
+    ~ Compress Folders - EXAMPLE - Not Enabled by Default during install
+        .\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner","IIS"
 	~ To Debug add to the CLI - EXAMPLE
 		*> "C:\software\LogRotationHandler.log"
 #>
