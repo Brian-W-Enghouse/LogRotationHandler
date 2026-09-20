@@ -64,6 +64,7 @@ param(
     ),
     [string[]]$SourceFolders = @(),
     [string]$AzCopyPath = "C:\Software\azcopy.exe",
+    [string]$SevenZipPath = "C:\Software\7zr.exe",
 	[switch]$Install,
 	[switch]$Uninstall,
     [switch]$RemoveStagingAfterUpload
@@ -103,15 +104,15 @@ function Uninstall-LogRotationTask {
 }
 
 if ($Install) {
-    if (-not (Test-Path "C:\Software\7zr.exe")) {
+    if (-not (Test-Path -LiteralPath $SevenZipPath)) {
         Write-Log "7zr.exe not found. Downloading."
-        Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile "C:\Software\7zr.exe"
+        Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile $SevenZipPath
         Write-Log "7zr.exe downloaded successfully."
         }
         else {
         Write-Log "7zr.exe already present."
         }
-    if (-not (Test-Path "C:\Software\azcopy.exe")) {
+    if (-not (Test-Path -LiteralPath $AzCopyPath)) {
         $azCopyZip = "C:\azcopy.zip"
         Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
         Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
