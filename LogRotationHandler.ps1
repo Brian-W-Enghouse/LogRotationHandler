@@ -1,13 +1,15 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.1.2
+	Brians Log Rotation Handler Script - Version 1.1.3
     Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
 			If not stopped within 2 minutes, Force stops if not completely stopped.
 	2 	-	Moves active log files from configured source folders into a timestamped staging directory
 	3 	-	Restarts syslog
-	4 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
+    4   -   Compress only folders selected by switch -CompressFolders.  If not supplied, no compression is performed.  Compression is done using 7zip and the 7zr.exe binary.
+    5   -   Deletes the local staging folder after successful compression and upload if -RemoveStagingAfterUpload is supplied.  If not supplied, the local staging folder is retained for troubleshooting.
+    6 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
 
 .REQUIREMENTS
 	~ Powershell 7 - Installed
