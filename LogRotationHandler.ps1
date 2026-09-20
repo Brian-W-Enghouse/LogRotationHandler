@@ -7,9 +7,11 @@
 			If not stopped within 2 minutes, Force stops if not completely stopped.
 	2 	-	Moves active log files from configured source folders into a timestamped staging directory
 	3 	-	Restarts syslog
-    4   -   Compress only folders selected by switch -CompressFolders.  If not supplied, no compression is performed.  Compression is done using 7zip and the 7zr.exe binary.
-    5   -   Deletes the local staging folder after successful compression and upload if -RemoveStagingAfterUpload is supplied.  If not supplied, the local staging folder is retained for troubleshooting.
-    6 	-	Uploads the staged files to Azure Blob Storage using Managed Identity.
+    4   -   Compress only folders selected by switch -CompressFolders.
+            If not supplied, no compression is performed.  Compression is done using 7zip and the 7zr.exe binary.
+    5   -   Uploads the staged files to Azure Blob Storage using Managed Identity.
+    6   -   Deletes the local staging folder after successful compression and upload if -RemoveStagingAfterUpload is supplied.
+            If not supplied, the local staging folder is retained for troubleshooting.
 
 .REQUIREMENTS
 	~ Powershell 7 - Installed
@@ -34,11 +36,11 @@
 	~ To UnInstall
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -Uninstall
 	~ Task Scheduled - EXAMPLE
-		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
+		powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\software\LogRotationHandler.ps1" -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner"
     ~ Run local - EXAMPLE
 		.\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload
-    ~ Compress Folders - EXAMPLE - Not Enabled by Default during install
-        .\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner","IIS"
+    ~ Compress Folders - EXAMPLE - Only CosmoDesigner enabled by Default during install
+        .\LogRotationHandler.ps1 -StorageAccountName "<storage-account-name>" -ContainerName "<container-name>" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner","IIS","ReportedProblems","CrashDumps"
 	~ To Debug add to the CLI - EXAMPLE
 		*> "C:\software\LogRotationHandler.log"
 #>
@@ -63,6 +65,7 @@ param(
         "IIS"
     ),
     [string[]]$SourceFolders = @(),
+    [string[]]$CompressFolders = @(),
     [string]$AzCopyPath = "C:\Software\azcopy.exe",
     [string]$SevenZipPath = "C:\Software\7zr.exe",
 	[switch]$Install,
@@ -92,10 +95,11 @@ function Install-LogRotationTask {
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 		Write-Log "Installing scheduled task as: $currentUser"
     $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
-    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -RemoveStagingAfterUpload"
+    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner"' -RemoveStagingAfterUpload"
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
+		Write-Log "Default scheduled compression folder: CosmoDesigner"
 }
 
 function Uninstall-LogRotationTask {
