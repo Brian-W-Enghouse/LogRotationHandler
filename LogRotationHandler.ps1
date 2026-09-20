@@ -288,6 +288,54 @@ function Move-SourceFoldersToStaging {
     }
 }
 
+
+function Compress-StagingFolders {
+    param(
+        [Parameter(Mandatory)]
+        [string]$StagingPath
+    )
+
+    if ($CompressFolders.Count -eq 0) {
+        Write-Log "No compression folders supplied. Compression will be skipped."
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $SevenZipPath -PathType Leaf)) {
+        throw "7-Zip executable was not found: $SevenZipPath"
+    }
+
+    foreach ($folderName in $CompressFolders) {
+        $sourceFolder = Join-Path $StagingPath $folderName
+        if (-not (Test-Path -LiteralPath $sourceFolder -PathType Container)) {
+			Write-Log "Compression folder does not exist in staging, skipping: $sourceFolder" "WARN"
+            continue
+        }
+        $archivePath = Join-Path $StagingPath "$folderName.7z"
+        Write-Log "Compressing staging folder: $sourceFolder"
+        Write-Log "Archive destination: $archivePath"
+        $sevenZipArgs = @(
+            "a",
+            "-t7z",
+            "-mx=5",
+            "-y",
+            $archivePath,
+            "$sourceFolder\*"
+        )
+        & $SevenZipPath @sevenZipArgs
+        $sevenZipExitCode = $LASTEXITCODE
+
+        if ($sevenZipExitCode -ne 0) {
+            throw "7-Zip compression failed for '$sourceFolder' with exit code $sevenZipExitCode."
+        }
+        if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf)) {
+            throw "7-Zip reported success, but the archive was not created: $archivePath"
+        }
+        Write-Log "Compression completed successfully: $archivePath"
+        Write-Log "Removing compressed source folder: $sourceFolder"
+        Remove-Item -LiteralPath $sourceFolder -Recurse -Force
+    }
+}
+
 function Invoke-AzCopyLoginManagedIdentity {
     Write-Log "Authenticating AzCopy using Managed Identity."
 
