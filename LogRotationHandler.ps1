@@ -95,7 +95,7 @@ function Install-LogRotationTask {
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 		Write-Log "Installing scheduled task as: $currentUser"
     $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
-    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -RemoveStagingAfterUpload -CompressFolders "CosmoDesigner"' -RemoveStagingAfterUpload"
+    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -CompressFolders "CosmoDesigner"' -RemoveStagingAfterUpload"
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
