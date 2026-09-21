@@ -45,6 +45,7 @@
 		*> "C:\software\LogRotationHandler.log"
 #>
 
+
 [CmdletBinding()]
 param(
     [string]$StorageAccountName = "<storage-account-name>",
@@ -382,7 +383,7 @@ if ($Install) {
         Write-Log "7zr.exe downloaded successfully."
         }
         else {
-        Write-Log "7zr.exe already present."
+            Write-Log "7zr.exe already present."
         }
     if (-not (Test-Path -LiteralPath $AzCopyPath)) {
         $azCopyZip = "C:\azcopy.zip"
@@ -394,9 +395,9 @@ if ($Install) {
         }
         Copy-Item -LiteralPath $azCopyExe.FullName -Destination $AzCopyPath -Force
         Write-Log "AzCopy extracted successfully."
-    }
-    else {
-        Write-Log "AzCopy already present."
+        }
+        else {
+             Write-Log "AzCopy already present."
     }    
         Install-LogRotationTask
     exit 0
@@ -410,7 +411,6 @@ if ($Uninstall) {
 
 if ($SourceFolders.Count -eq 0) {
     $driveRoot = Get-TempDriveRoot
- 
     $SourceFolders = $SourceFolderNames | ForEach-Object {
     Join-Path $driveRoot $_
     }
@@ -420,7 +420,6 @@ try {
     $timestampFolder = Get-RoundedTimestamp
     $hostname = $env:COMPUTERNAME
     $stagingPath = Join-Path $StagingRoot $timestampFolder
-
     Write-Log "Starting log rotation."
     Write-Log "Hostname: $hostname"
     Write-Log "Timestamp folder: $timestampFolder"
@@ -431,18 +430,18 @@ try {
     foreach ($sourceFolder in $SourceFolders) {
         Write-Log " - $sourceFolder"
     }
-#
+
     if ($CompressFolders.Count -gt 0) {
         Write-Log "Folders selected for compression:"
 
         foreach ($compressFolder in $CompressFolders) {
             Write-Log " - $compressFolder"
         }
+        }
+        else {
+            Write-Log "No folders selected for compression."
     }
-    else {
-        Write-Log "No folders selected for compression."
-    }
-#
+
     New-Item -Path $stagingPath -ItemType Directory -Force | Out-Null
 
     Stop-Syslog
