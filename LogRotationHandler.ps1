@@ -300,6 +300,11 @@ function Compress-StagingFolders {
 			Write-Log "Compression folder does not exist in staging, skipping: $sourceFolder" "WARN"
             continue
         }
+        $firstFile = Get-ChildItem -LiteralPath $sourceFolder -File -Recurse -Force | Select-Object -First 1
+        if ($null -eq $firstFile) {
+            Write-Log "Compression folder contains no files, skipping: $sourceFolder"
+            continue
+        }
         $archivePath = Join-Path $StagingPath "$folderName.7z"
         Write-Log "Compressing staging folder: $sourceFolder"
         Write-Log "Archive destination: $archivePath"
