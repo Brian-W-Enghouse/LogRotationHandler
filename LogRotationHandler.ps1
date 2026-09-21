@@ -305,6 +305,8 @@ function Compress-StagingFolders {
             Write-Log "Compression folder contains no files, skipping: $sourceFolder"
             continue
         }
+        Write-Log "Compression triggered by file: $($firstFile.FullName)"
+        Write-Log "Compression trigger file size: $($firstFile.Length) bytes"
         $archivePath = Join-Path $StagingPath "$folderName.7z"
         Write-Log "Compressing staging folder: $sourceFolder"
         Write-Log "Archive destination: $archivePath"
