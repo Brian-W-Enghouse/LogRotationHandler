@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.1.3
+	Brians Log Rotation Handler Script - Version 1.1.5
     Change: Source folder paths are now dynamically resolved from the drive root of the TEMP environment variable unless -SourceFolders is explicitly supplied.
 	Process Overview
 	1	-	Stops syslog service/processes.
@@ -95,7 +95,8 @@ function Install-LogRotationTask {
     $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 		Write-Log "Installing scheduled task as: $currentUser"
     $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
-    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"C:\Software\LogRotationHandler.ps1`" -StorageAccountName `"$StorageAccountName`" -ContainerName `"$ContainerName`" -CompressFolders "CosmoDesigner"' -RemoveStagingAfterUpload"
+    $actionArguments = '-NoProfile -ExecutionPolicy Bypass -File "C:\Software\LogRotationHandler.ps1" -StorageAccountName "' + $StorageAccountName + '" -ContainerName "' + $ContainerName + '" -CompressFolders "CosmoDesigner" -RemoveStagingAfterUpload'
+    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument $actionArguments
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
@@ -105,38 +106,6 @@ function Install-LogRotationTask {
 function Uninstall-LogRotationTask {
 	Unregister-ScheduledTask -TaskName "LogRotationHandler" -Confirm:$false
 	Write-Log "Scheduled task removed."
-}
-
-if ($Install) {
-    if (-not (Test-Path -LiteralPath $SevenZipPath)) {
-        Write-Log "7zr.exe not found. Downloading."
-        Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile $SevenZipPath
-        Write-Log "7zr.exe downloaded successfully."
-        }
-        else {
-        Write-Log "7zr.exe already present."
-        }
-    if (-not (Test-Path -LiteralPath $AzCopyPath)) {
-        $azCopyZip = "C:\azcopy.zip"
-        Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
-        Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
-        $azCopyExe = Get-ChildItem -Path "C:\Software" -Recurse -Filter "azcopy.exe" | Select-Object -First 1
-        if (-not $azCopyExe) {
-            throw "Failed to locate azcopy.exe in downloaded package."
-        }
-        Copy-Item $azCopyExe.FullName "C:\Software\azcopy.exe" -Force
-        Write-Log "AzCopy extracted successfully."
-    }
-    else {
-        Write-Log "AzCopy already present."
-    }    
-        Install-LogRotationTask
-    exit 0
-}
-
-if ($Uninstall) {
-    Uninstall-LogRotationTask
-    exit 0
 }
 
 function Get-TempDriveRoot {
@@ -288,6 +257,27 @@ function Move-SourceFoldersToStaging {
     }
 }
 
+function Resolve-CompressFolders {
+    if ($CompressFolders.Count -eq 0) {
+        return @()
+    }
+
+    $resolvedFolders = foreach ($compressFolderEntry in $CompressFolders) {
+        foreach ($folderName in ($compressFolderEntry -split ",")) {
+            $cleanFolderName = $folderName.Trim().Trim('"').Trim("'")
+
+            if ($cleanFolderName) {
+                $cleanFolderName
+            }
+        }
+    }
+
+    return @(
+        $resolvedFolders | Sort-Object -Unique
+    )
+}
+
+$CompressFolders = @(Resolve-CompressFolders)
 
 function Compress-StagingFolders {
     param(
@@ -385,6 +375,39 @@ function Upload-StagingToBlob {
     Write-Log "Upload completed successfully."
 }
 
+if ($Install) {
+    if (-not (Test-Path -LiteralPath $SevenZipPath)) {
+        Write-Log "7zr.exe not found. Downloading."
+        Invoke-WebRequest -Uri "https://www.7-zip.org/a/7zr.exe" -OutFile $SevenZipPath
+        Write-Log "7zr.exe downloaded successfully."
+        }
+        else {
+        Write-Log "7zr.exe already present."
+        }
+    if (-not (Test-Path -LiteralPath $AzCopyPath)) {
+        $azCopyZip = "C:\azcopy.zip"
+        Invoke-WebRequest -Uri "https://aka.ms/downloadazcopy-v10-windows" -OutFile $azCopyZip
+        Expand-Archive -Path $azCopyZip -DestinationPath "C:\Software" -Force
+        $azCopyExe = Get-ChildItem -Path "C:\Software" -Recurse -Filter "azcopy.exe" | Select-Object -First 1
+        if (-not $azCopyExe) {
+            throw "Failed to locate azcopy.exe in downloaded package."
+        }
+        Copy-Item -LiteralPath $azCopyExe.FullName -Destination $AzCopyPath -Force
+        Write-Log "AzCopy extracted successfully."
+    }
+    else {
+        Write-Log "AzCopy already present."
+    }    
+        Install-LogRotationTask
+    exit 0
+}
+
+if ($Uninstall) {
+    Uninstall-LogRotationTask
+    exit 0
+}
+
+
 if ($SourceFolders.Count -eq 0) {
     $driveRoot = Get-TempDriveRoot
  
@@ -408,7 +431,18 @@ try {
     foreach ($sourceFolder in $SourceFolders) {
         Write-Log " - $sourceFolder"
     }
+#
+    if ($CompressFolders.Count -gt 0) {
+        Write-Log "Folders selected for compression:"
 
+        foreach ($compressFolder in $CompressFolders) {
+            Write-Log " - $compressFolder"
+        }
+    }
+    else {
+        Write-Log "No folders selected for compression."
+    }
+#
     New-Item -Path $stagingPath -ItemType Directory -Force | Out-Null
 
     Stop-Syslog
@@ -420,7 +454,7 @@ try {
         # Critical: bring syslog back even if move partially fails.
         Start-Syslog
     }
-
+    Compress-StagingFolders -StagingPath $stagingPath
     Invoke-AzCopyLoginManagedIdentity
     Upload-StagingToBlob -StagingPath $stagingPath -TimestampFolder $timestampFolder
 
@@ -428,7 +462,9 @@ try {
         Write-Log "Removing local staging folder: $stagingPath"
         Remove-Item -LiteralPath $stagingPath -Recurse -Force
     }
-
+    else {
+        Write-Log "Local staging retained: $stagingPath"
+    }
     Write-Log "Log rotation completed successfully."
     exit 0
 }
