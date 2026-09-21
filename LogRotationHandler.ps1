@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.1.5
+	Brians Log Rotation Handler Script - Version 1.1.6
 	Process Overview
 	1	-	Stops syslog service/processes.
 			If not stopped within 2 minutes, Force stops if not completely stopped.
@@ -96,7 +96,7 @@ function Install-LogRotationTask {
 		Write-Log "Installing scheduled task as: $currentUser"
     $credential = Get-Credential -UserName $currentUser -Message "Enter the password for the service account"
     $actionArguments = '-NoProfile -ExecutionPolicy Bypass -File "C:\Software\LogRotationHandler.ps1" -StorageAccountName "' + $StorageAccountName + '" -ContainerName "' + $ContainerName + '" -CompressFolders "CosmoDesigner" -RemoveStagingAfterUpload'
-    $action = New-ScheduledTaskAction -Execute "pwsh.exe" -Argument $actionArguments
+    $action = New-ScheduledTaskAction -Execute "C:\Program Files\PowerShell\7\pwsh.exe" -Argument $actionArguments
     $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddHours(1) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration (New-TimeSpan -Days 3650)
 		Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -User $credential.UserName -Password ($credential.GetNetworkCredential().Password) -RunLevel Highest -Force
 		Write-Log "Scheduled task installed successfully as $($credential.UserName)"
