@@ -1,6 +1,6 @@
 <#
 .DESCRIPTION
-	Brians Log Rotation Handler Script - Version 1.1.6
+	Brians Log Rotation Handler Script - Version 1.2.0-RC
 	Process Overview
 	1	-	Stops syslog service/processes.
 			If not stopped within 2 minutes, Force stops if not completely stopped.
