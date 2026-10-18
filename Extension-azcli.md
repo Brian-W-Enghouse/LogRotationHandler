@@ -14,3 +14,4 @@ foreach ($VmName in $Vms) {
     Write-Host "Deploying to $VmName"
     az vm extension set --resource-group $ResourceGroup --vm-name $VmName --name CustomScriptExtension --publisher Microsoft.Compute --version 1.10 --settings '{"commandToExecute":"powershell.exe -ExecutionPolicy Bypass -Command Invoke-WebRequest -Uri https://raw.githubusercontent.com/Brian-W-Enghouse/LogRotationHandler/refs/heads/main/LogRotationHandler.ps1 -OutFile C:\\software\\LogRotationHandler.ps1 -UseBasicParsing"}'
 }
+az vm extension set --resource-group $ResourceGroup --vm-name $VmName --name CustomScriptExtension --publisher Microsoft.Compute --version 1.10 --settings '{"commandToExecute":"powershell.exe -ExecutionPolicy Bypass -Command New-Item -Path C:\\software -ItemType Directory -Force; Invoke-WebRequest -Uri https://raw.githubusercontent.com/Brian-W-Enghouse/LogRotationHandler/refs/heads/main/LogRotationHandler.ps1 -OutFile C:\\software\\LogRotationHandler.ps1 -UseBasicParsing"}'
